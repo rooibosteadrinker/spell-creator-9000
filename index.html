@@ -10,13 +10,11 @@
     <main class="page">
       <header class="hero">
         <div class="hero__copy">
-          <h1>Spell Creator 9000</h1>
-          <p class="subtitle">For Spawn's Savi</p>
+          <h1>Savi Spell Creator</h1>
         </div>
         <div class="hero__card">
           <div class="preset-bar">
             <button id="savePresetBtn" class="btn btn--ghost" type="button">Save Preset</button>
-            <label class="btn btn--ghost" for="presetFile">Load Preset</label>
             <label class="btn btn--ghost" for="presetFile">Upload Preset (.json)</label>
             <input id="presetFile" type="file" accept="application/json" class="is-hidden" />
           </div>
@@ -81,7 +79,7 @@
       <section class="output">
         <div class="output__header">
           <h2>Prompt Output</h2>
-          <button id="copyBtn" class="btn" type="button">Copy to clipboard</button>
+          <button id="copyBtn" class="btn btn--copy" type="button">Copy</button>
         </div>
         <textarea
           id="outputText"

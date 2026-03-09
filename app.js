@@ -89,13 +89,11 @@ const state = {
   spellbookCustom: "",
   dispelCategory: "",
   dispelCategoryCustom: "",
-  spellLevelMode: "",
   spellLevelCustom: "",
   exclusiveCategory: "",
   exclusiveCategoryCustom: "",
   castingTime: "",
   castingTimeCustom: "",
-  duration: "",
   durationCustom: "",
   spellNameMode: "",
   spellNameCustom: "",
@@ -182,37 +180,11 @@ const toggleField = (fieldId, isVisible) => {
   field.classList.toggle("is-hidden", !isVisible);
 };
 
-const filterAnimationOptions = (query) => {
-  const animationSelect = document.getElementById("animationSelect");
-  const animationSearchList = document.getElementById("animationSearchList");
-  if (!animationSelect) return;
-  const normalized = query.trim().toLowerCase();
-  const filtered =
-    normalized.length === 0
-      ? animationNames
-      : animationNames.filter((name) =>
-          name.toLowerCase().includes(normalized)
-        );
-  if (animationSearchList) {
-    const suggestions = filtered.slice(0, 20);
-    animationSearchList.innerHTML = suggestions
-      .map((name) => `<option value="${name}"></option>`)
-      .join("");
-  }
-  const optionsMarkup = [
-    `<option value="" selected disabled>Select...</option>`,
-    `<option value="None">None</option>`,
-    ...filtered.map((name) => `<option>${name}</option>`),
-  ].join("");
-  animationSelect.innerHTML = optionsMarkup;
-};
-
 let animationNames = [];
 
 const loadAnimations = async () => {
   const animationSelect = document.getElementById("animationSelect");
   const animationDatalist = document.getElementById("animationDatalist");
-  const animationSearchList = document.getElementById("animationSearchList");
   if (!animationSelect) return;
 
   const setStatus = (label, disabled = true) => {
@@ -234,12 +206,6 @@ const loadAnimations = async () => {
         .map((name) => `<option value="${name}"></option>`)
         .join("");
     }
-    if (animationSearchList) {
-      animationSearchList.innerHTML = names
-        .slice(0, 20)
-        .map((name) => `<option value="${name}"></option>`)
-        .join("");
-    }
   };
 
   const parseFromDocument = (doc) => {
@@ -249,11 +215,26 @@ const loadAnimations = async () => {
       .filter(Boolean);
     if (fromTable.length) return fromTable;
 
-    const text = doc.body?.innerText || doc.body?.textContent || "";
+    return parseFromText(doc.body?.innerText || doc.body?.textContent || "");
+  };
+
+  const parseFromText = (text) => {
     const names = [];
     text.split("\n").forEach((line) => {
-      const match = line.match(/^\s*\d+\s+([A-Za-z0-9_]+)\s+/);
-      if (match) names.push(match[1]);
+      const trimmed = line.trim();
+      if (!trimmed) return;
+      if (trimmed.includes("|")) {
+        const parts = trimmed
+          .split("|")
+          .map((part) => part.trim())
+          .filter(Boolean);
+        if (parts.length >= 3 && /^\d+$/.test(parts[0])) {
+          names.push(parts[1]);
+        }
+      } else {
+        const match = trimmed.match(/^\s*\d+\s+([A-Za-z0-9_-]+)\s+\S+\s+\S+/);
+        if (match) names.push(match[1]);
+      }
     });
     return names;
   };
@@ -270,8 +251,12 @@ const loadAnimations = async () => {
   setStatus("Loading animations...");
 
   const sources = [
+    "https://docs.meshy.ai/api/animation-library",
     "https://docs.meshy.ai/en/api/animation-library",
+    "https://r.jina.ai/http://docs.meshy.ai/api/animation-library",
     "https://r.jina.ai/http://docs.meshy.ai/en/api/animation-library",
+    "https://r.jina.ai/http://https://docs.meshy.ai/api/animation-library",
+    "https://r.jina.ai/http://https://docs.meshy.ai/en/api/animation-library",
   ];
 
   for (const source of sources) {
@@ -280,7 +265,8 @@ const loadAnimations = async () => {
       if (!response.ok) throw new Error("Fetch failed");
       const html = await response.text();
       const doc = new DOMParser().parseFromString(html, "text/html");
-      const names = uniqueNames(parseFromDocument(doc));
+      const parsed = parseFromDocument(doc);
+      const names = uniqueNames(parsed.length ? parsed : parseFromText(html));
       if (names.length > 0) {
         populate(names);
         return;
@@ -313,18 +299,7 @@ const renderCriteria = () => {
   const dispelCustom = buildTextInput("dispelCategoryCustom", "Custom Dispel Category", "Enter custom category");
   dispelCustom.classList.add("is-hidden");
 
-  const spellLevelWrap = document.createElement("div");
-  spellLevelWrap.className = "field";
-  spellLevelWrap.innerHTML = `
-    <span class="field__label">Spell Level</span>
-    <select id="spellLevelMode" class="field__control">
-      <option value="" selected disabled>Select...</option>
-      <option>None</option>
-      <option>Custom</option>
-    </select>
-  `;
-  const spellLevelCustom = buildNumberInput("spellLevelCustom", "Custom Spell Level (1-60)", "Enter a number");
-  spellLevelCustom.classList.add("is-hidden");
+  const spellLevelCustom = buildNumberInput("spellLevelCustom", "Spell Level", "Enter a number");
 
   const exclusiveField = document.createElement("div");
   exclusiveField.className = "field";
@@ -350,29 +325,17 @@ const renderCriteria = () => {
   const castingCustom = buildTextInput("castingTimeCustom", "Custom Casting Time", "Describe casting time");
   castingCustom.classList.add("is-hidden");
 
-  const durationField = document.createElement("div");
-  durationField.className = "field";
-  durationField.innerHTML = `
-    <span class="field__label">Duration</span>
-    <select id="duration" class="field__control">
-      <option value="" selected disabled>Select...</option>
-      ${options.duration.map((item) => `<option>${item}</option>`).join("")}
-    </select>
-  `;
-  const durationCustom = buildTextInput("durationCustom", "Custom Duration", "Describe duration");
-  durationCustom.classList.add("is-hidden");
+  const durationCustom = buildTextInput("durationCustom", "Duration", "e.g. None, 30 min, 2 hours");
 
   coreRow.appendChild(dispelField);
-  coreRow.appendChild(spellLevelWrap);
+  coreRow.appendChild(spellLevelCustom);
   coreRow.appendChild(exclusiveField);
   coreRow.appendChild(castingField);
-  coreRow.appendChild(durationField);
+  coreRow.appendChild(durationCustom);
   core.appendChild(coreRow);
   core.appendChild(dispelCustom);
-  core.appendChild(spellLevelCustom);
   core.appendChild(exclusiveCustom);
   core.appendChild(castingCustom);
-  core.appendChild(durationCustom);
 
   const coreRowTwo = document.createElement("div");
   coreRowTwo.className = "row";
@@ -394,18 +357,12 @@ const renderCriteria = () => {
   coreRowTwo.appendChild(buildTextInput("damage", "Damage (Number or Range)", "e.g. 120 or 80-140"));
   core.appendChild(coreRowTwo);
   core.appendChild(spellNameCustom);
-  coreRow.appendChild(
-    buildSelect("exclusiveCategory", "Exclusive Category", options.exclusiveCategory, false)
-  );
-  coreRow.appendChild(buildSelect("castingTime", "Casting Time", options.castingTime, false));
-  coreRow.appendChild(buildSelect("duration", "Duration", options.duration, false));
-  core.appendChild(coreRow);
 
   const interrupts = document.createElement("div");
   interrupts.className = "section";
   interrupts.innerHTML = `
     <h3>Interrupts</h3>
-    <div class="field">
+    <div class="field dropdown">
       <span class="field__label">Interrupts</span>
       <button id="interruptsToggle" class="field__control dropdown__toggle" type="button">
         Select interrupts
@@ -459,7 +416,7 @@ const renderCriteria = () => {
   const iconPreview = document.createElement("div");
   iconPreview.className = "icon-preview";
   iconPreview.innerHTML = `
-    <span class="field__label">Spell Icon Preview</span>
+    <span class="field__label">Preview</span>
     <div class="icon-preview__frame">
       <img id="spellIconPreview" alt="Spell icon preview" />
       <span class="icon-preview__empty">No icon loaded</span>
@@ -484,22 +441,17 @@ const renderCriteria = () => {
   const animation = document.createElement("div");
   animation.className = "section";
   animation.innerHTML = `
-    <h3>Animation</h3>
+    <h3>All animations</h3>
     <div class="row">
       <label class="field">
-        <span class="field__label">Search Animations</span>
-        <input id="animationSearch" class="field__control" type="text" placeholder="Start typing to see suggestions" list="animationSearchList" />
-        <datalist id="animationSearchList"></datalist>
-      </label>
-      <label class="field">
-        <span class="field__label">Casting Animation (Dropdown)</span>
+        <span class="field__label">Animation</span>
         <select id="animationSelect" class="field__control">
           <option value="" selected disabled>Loading animations...</option>
         </select>
       </label>
       <label class="field">
-        <span class="field__label">Casting Animation (Exact Name)</span>
-        <input id="animationManual" class="field__control" type="text" placeholder="Type exact name if you prefer" list="animationDatalist" />
+        <span class="field__label">Animation (Type To Search)</span>
+        <input id="animationManual" class="field__control" type="text" placeholder="Start typing animation name" list="animationDatalist" />
         <datalist id="animationDatalist"></datalist>
       </label>
     </div>
@@ -537,11 +489,14 @@ const renderCriteria = () => {
       event.stopPropagation();
       interruptsMenu.classList.toggle("is-open");
     });
-    document.addEventListener("click", (event) => {
+    const closeMenu = (event) => {
       if (!interruptsMenu.contains(event.target) && event.target !== interruptsToggle) {
         interruptsMenu.classList.remove("is-open");
       }
-    });
+    };
+    document.addEventListener("click", closeMenu);
+    criteria.addEventListener("focusin", closeMenu);
+    // closeMenu handles outside clicks and focus changes
   }
 
   const preview = document.getElementById("spellIconPreview");
@@ -610,6 +565,11 @@ const handleInputChange = (event) => {
     } else {
       state.interrupts.delete(value);
     }
+    const toggle = document.getElementById("interruptsToggle");
+    if (toggle) {
+      const items = [...state.interrupts].filter((item) => item !== "None");
+      toggle.textContent = items.length ? items.join(", ") : "Select interrupts";
+    }
   } else if (id === "dispelCategory") {
     state.dispelCategory = value;
     toggleField("dispelCategoryCustom", value === "Custom");
@@ -620,14 +580,6 @@ const handleInputChange = (event) => {
     }
   } else if (id === "dispelCategoryCustom") {
     state.dispelCategoryCustom = value.trim();
-  } else if (id === "spellLevelMode") {
-    state.spellLevelMode = value;
-    toggleField("spellLevelCustom", value === "Custom");
-    if (value !== "Custom") {
-      state.spellLevelCustom = "";
-      const input = document.getElementById("spellLevelCustom");
-      if (input) input.value = "";
-    }
   } else if (id === "spellLevelCustom") {
     state.spellLevelCustom = value;
   } else if (id === "exclusiveCategory") {
@@ -650,14 +602,6 @@ const handleInputChange = (event) => {
     }
   } else if (id === "castingTimeCustom") {
     state.castingTimeCustom = value.trim();
-  } else if (id === "duration") {
-    state.duration = value;
-    toggleField("durationCustom", value === "Custom");
-    if (value !== "Custom") {
-      state.durationCustom = "";
-      const input = document.getElementById("durationCustom");
-      if (input) input.value = "";
-    }
   } else if (id === "durationCustom") {
     state.durationCustom = value.trim();
   } else if (id === "spellNameMode") {
@@ -702,13 +646,13 @@ const handleInputChange = (event) => {
   else if (id === "slashNoise") state.slashVfx.noise = value;
   else if (id === "slashGlow") state.slashVfx.glow = value;
   else if (id === "slashTiming") state.slashVfx.timing = value;
-  else if (id === "animationSearch") {
-    filterAnimationOptions(value);
-  } else if (id === "animationSelect") {
+  else if (id === "animationSelect") {
     state.animationNameSelect = value;
-    const manual = document.getElementById("animationManual");
-    if (manual) manual.value = value === "None" ? "" : value;
-    state.animationNameManual = value === "None" ? "" : value;
+    if (value && value !== "None") {
+      const manual = document.getElementById("animationManual");
+      if (manual) manual.value = value;
+      state.animationNameManual = value;
+    }
   } else if (id === "animationManual") {
     state.animationNameManual = value.trim();
   }
@@ -718,9 +662,6 @@ const handleInputChange = (event) => {
 };
 
 const validateLevel = () => {
-  if (state.spellLevelMode !== "Custom") {
-    return true;
-  }
   if (!state.spellLevelCustom) {
     return true;
   }
@@ -748,7 +689,7 @@ const getSelectionCount = () => {
   let count = 0;
   if (state.dispelCategory && state.dispelCategory !== "Custom") count += 1;
   if (state.dispelCategory === "Custom" && state.dispelCategoryCustom) count += 1;
-  if (state.spellLevelMode === "Custom" && state.spellLevelCustom && validateLevel()) count += 1;
+  if (state.spellLevelCustom && validateLevel()) count += 1;
   if (state.spellNameMode === "Ask Savi") count += 1;
   if (state.spellNameMode === "Custom" && state.spellNameCustom) count += 1;
   if (state.manaCost) count += 1;
@@ -758,8 +699,7 @@ const getSelectionCount = () => {
   if (state.exclusiveCategory === "Custom" && state.exclusiveCategoryCustom) count += 1;
   if (state.castingTime && state.castingTime !== "Custom") count += 1;
   if (state.castingTime === "Custom" && state.castingTimeCustom) count += 1;
-  if (state.duration && state.duration !== "Custom") count += 1;
-  if (state.duration === "Custom" && state.durationCustom) count += 1;
+  if (state.durationCustom) count += 1;
   if (state.interrupts.size > 0 && !state.interrupts.has("None")) count += 1;
   if (state.vfx.particle && state.vfx.particle !== "None") count += 1;
   if (state.vfx.screen && state.vfx.screen !== "None") count += 1;
@@ -794,7 +734,7 @@ const updateOutput = () => {
     errors.push("Spell level must be between 1 and 60.");
   }
   if (selectionCount < 3) {
-    errors.push("Select at least 3 criteria to generate output.");
+    errors.push(`Select at least 3 criteria to generate output. (${selectionCount}/3 selected)`);
   }
 
   validation.textContent = errors.join(" ");
@@ -815,8 +755,7 @@ const updateOutput = () => {
   const exclusive = normalizeExclusive(exclusiveBase);
   const castingTime =
     state.castingTime === "Custom" ? state.castingTimeCustom : state.castingTime;
-  const duration =
-    state.duration === "Custom" ? state.durationCustom : state.duration;
+  const duration = state.durationCustom;
   const sentenceParts = [`For the ${state.className} class, create`];
   sentenceParts.push(exclusive || "a spell");
 
@@ -827,7 +766,7 @@ const updateOutput = () => {
         : dispelCategory.toLowerCase();
     sentenceParts.push(`with dispel category ${dispelText}`);
   }
-  if (state.spellLevelMode === "Custom" && state.spellLevelCustom && levelValid) {
+  if (state.spellLevelCustom && levelValid) {
     sentenceParts.push(`at spell level ${state.spellLevelCustom}`);
   }
   lines.push(`${sentenceParts.join(" ")}.`);
@@ -943,7 +882,6 @@ const handleClassChange = (event) => {
     state.spellbookCustom = "";
     state.dispelCategory = "";
     state.dispelCategoryCustom = "";
-    state.spellLevelMode = "";
     state.spellLevelCustom = "";
     state.spellNameMode = "";
     state.spellNameCustom = "";
@@ -954,7 +892,6 @@ const handleClassChange = (event) => {
     state.exclusiveCategoryCustom = "";
     state.castingTime = "";
     state.castingTimeCustom = "";
-    state.duration = "";
     state.durationCustom = "";
     state.interrupts = new Set();
     state.vfx = {
@@ -1010,7 +947,6 @@ const buildPreset = () => ({
   spellbookCustom: state.spellbookCustom,
   dispelCategory: state.dispelCategory,
   dispelCategoryCustom: state.dispelCategoryCustom,
-  spellLevelMode: state.spellLevelMode,
   spellLevelCustom: state.spellLevelCustom,
   spellNameMode: state.spellNameMode,
   spellNameCustom: state.spellNameCustom,
@@ -1021,7 +957,6 @@ const buildPreset = () => ({
   exclusiveCategoryCustom: state.exclusiveCategoryCustom,
   castingTime: state.castingTime,
   castingTimeCustom: state.castingTimeCustom,
-  duration: state.duration,
   durationCustom: state.durationCustom,
   interrupts: [...state.interrupts],
   vfx: { ...state.vfx },
@@ -1081,11 +1016,8 @@ const applyPreset = (preset) => {
   state.dispelCategoryCustom = preset.dispelCategoryCustom || "";
   toggleField("dispelCategoryCustom", state.dispelCategory === "Custom");
 
-  setField("spellLevelMode", preset.spellLevelMode);
-  state.spellLevelMode = preset.spellLevelMode || "";
   setField("spellLevelCustom", preset.spellLevelCustom);
   state.spellLevelCustom = preset.spellLevelCustom || "";
-  toggleField("spellLevelCustom", state.spellLevelMode === "Custom");
 
   setField("spellNameMode", preset.spellNameMode);
   state.spellNameMode = preset.spellNameMode || "";
@@ -1112,11 +1044,8 @@ const applyPreset = (preset) => {
   state.castingTimeCustom = preset.castingTimeCustom || "";
   toggleField("castingTimeCustom", state.castingTime === "Custom");
 
-  setField("duration", preset.duration);
-  state.duration = preset.duration || "";
   setField("durationCustom", preset.durationCustom);
   state.durationCustom = preset.durationCustom || "";
-  toggleField("durationCustom", state.duration === "Custom");
 
   state.interrupts = new Set(preset.interrupts || []);
   const interruptsMenu = document.getElementById("interruptsMenu");
@@ -1124,6 +1053,11 @@ const applyPreset = (preset) => {
     interruptsMenu.querySelectorAll('input[type="checkbox"]').forEach((box) => {
       box.checked = state.interrupts.has(box.value);
     });
+  }
+  const interruptsToggle = document.getElementById("interruptsToggle");
+  if (interruptsToggle) {
+    const items = [...state.interrupts].filter((item) => item !== "None");
+    interruptsToggle.textContent = items.length ? items.join(", ") : "Select interrupts";
   }
 
   state.vfx = { ...state.vfx, ...(preset.vfx || {}) };
