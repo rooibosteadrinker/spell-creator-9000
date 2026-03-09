@@ -115,7 +115,6 @@ const state = {
     glow: "",
     timing: "",
   },
-  animationNameSelect: "",
   animationNameManual: "",
   notes: "",
 };
@@ -183,29 +182,18 @@ const toggleField = (fieldId, isVisible) => {
 let animationNames = [];
 
 const loadAnimations = async () => {
-  const animationSelect = document.getElementById("animationSelect");
   const animationDatalist = document.getElementById("animationDatalist");
-  if (!animationSelect) return;
+  if (!animationDatalist) return;
 
-  const setStatus = (label, disabled = true) => {
-    animationSelect.innerHTML = `<option value="">${label}</option>`;
-    animationSelect.disabled = disabled;
+  const setStatus = (label) => {
+    animationDatalist.innerHTML = `<option value="${label}"></option>`;
   };
 
   const populate = (names) => {
     animationNames = names;
-    const optionsMarkup = [
-      `<option value="" selected disabled>Select...</option>`,
-      `<option value="None">None</option>`,
-      ...names.map((name) => `<option>${name}</option>`),
-    ].join("");
-    animationSelect.innerHTML = optionsMarkup;
-    animationSelect.disabled = false;
-    if (animationDatalist) {
-      animationDatalist.innerHTML = names
-        .map((name) => `<option value="${name}"></option>`)
-        .join("");
-    }
+    animationDatalist.innerHTML = names
+      .map((name) => `<option value="${name}"></option>`)
+      .join("");
   };
 
   const parseFromDocument = (doc) => {
@@ -276,7 +264,7 @@ const loadAnimations = async () => {
     }
   }
 
-  setStatus("Unable to load animations", true);
+  setStatus("Unable to load animations");
 };
 
 const renderCriteria = () => {
@@ -443,12 +431,6 @@ const renderCriteria = () => {
   animation.innerHTML = `
     <h3>All animations</h3>
     <div class="row">
-      <label class="field">
-        <span class="field__label">Animation</span>
-        <select id="animationSelect" class="field__control">
-          <option value="" selected disabled>Loading animations...</option>
-        </select>
-      </label>
       <label class="field">
         <span class="field__label">Animation (Type To Search)</span>
         <input id="animationManual" class="field__control" type="text" placeholder="Start typing animation name" list="animationDatalist" />
@@ -646,14 +628,7 @@ const handleInputChange = (event) => {
   else if (id === "slashNoise") state.slashVfx.noise = value;
   else if (id === "slashGlow") state.slashVfx.glow = value;
   else if (id === "slashTiming") state.slashVfx.timing = value;
-  else if (id === "animationSelect") {
-    state.animationNameSelect = value;
-    if (value && value !== "None") {
-      const manual = document.getElementById("animationManual");
-      if (manual) manual.value = value;
-      state.animationNameManual = value;
-    }
-  } else if (id === "animationManual") {
+  else if (id === "animationManual") {
     state.animationNameManual = value.trim();
   }
   else if (id === "notes") state.notes = value.trim();
@@ -712,7 +687,6 @@ const getSelectionCount = () => {
   if (state.slashVfx.glow && state.slashVfx.glow !== "None") count += 1;
   if (state.slashVfx.timing && state.slashVfx.timing !== "None") count += 1;
   if (state.animationNameManual) count += 1;
-  else if (state.animationNameSelect && state.animationNameSelect !== "None") count += 1;
   if (state.notes) count += 1;
   return count;
 };
@@ -837,9 +811,7 @@ const updateOutput = () => {
     lines.push(`Slash VFX: ${slashBits.join("; ")}.`);
   }
 
-  const animationName =
-    state.animationNameManual ||
-    (state.animationNameSelect !== "None" ? state.animationNameSelect : "");
+  const animationName = state.animationNameManual;
   if (animationName) {
     lines.push(`Casting animation: ${animationName}.`);
     lines.push(
@@ -908,7 +880,6 @@ const handleClassChange = (event) => {
       glow: "",
       timing: "",
     };
-    state.animationNameSelect = "";
     state.animationNameManual = "";
     state.notes = "";
     criteria.classList.remove("is-hidden");
@@ -961,7 +932,6 @@ const buildPreset = () => ({
   interrupts: [...state.interrupts],
   vfx: { ...state.vfx },
   slashVfx: { ...state.slashVfx },
-  animationNameSelect: state.animationNameSelect,
   animationNameManual: state.animationNameManual,
   notes: state.notes,
 });
@@ -1087,9 +1057,7 @@ const applyPreset = (preset) => {
   setField("slashGlow", state.slashVfx.glow);
   setField("slashTiming", state.slashVfx.timing);
 
-  state.animationNameSelect = preset.animationNameSelect || "";
   state.animationNameManual = preset.animationNameManual || "";
-  setField("animationSelect", state.animationNameSelect);
   setField("animationManual", state.animationNameManual);
 
   state.notes = preset.notes || "";
