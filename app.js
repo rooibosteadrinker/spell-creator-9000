@@ -429,7 +429,7 @@ const renderCriteria = () => {
   const animation = document.createElement("div");
   animation.className = "section";
   animation.innerHTML = `
-    <h3>All animations</h3>
+    <h3>Animation</h3>
     <div class="row">
       <label class="field">
         <span class="field__label">Animation (Type To Search)</span>
