@@ -1,0 +1,99 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Spell Creator 9000</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <main class="page">
+      <header class="hero">
+        <div class="hero__copy">
+          <h1>Spell Creator 9000</h1>
+          <p class="subtitle">For Spawn's Savi</p>
+        </div>
+        <div class="hero__card">
+          <div class="preset-bar">
+            <button id="savePresetBtn" class="btn btn--ghost" type="button">Save Preset</button>
+            <label class="btn btn--ghost" for="presetFile">Load Preset</label>
+            <label class="btn btn--ghost" for="presetFile">Upload Preset (.json)</label>
+            <input id="presetFile" type="file" accept="application/json" class="is-hidden" />
+          </div>
+          <label class="field">
+            <span class="field__label">Class</span>
+            <select id="classSelect" class="field__control">
+              <option value="" selected disabled>Select a class</option>
+              <option>None</option>
+              <option>Blood Knight</option>
+              <option>Necromancer</option>
+              <option>Cultist</option>
+              <option>Engineer</option>
+              <option value="__custom__">Custom...</option>
+            </select>
+          </label>
+          <label id="customClassField" class="field is-hidden">
+            <span class="field__label">Custom Class Name</span>
+            <input id="customClass" class="field__control" type="text" placeholder="Enter class name" />
+          </label>
+          <label class="field">
+            <span class="field__label">Spellbar Slot</span>
+            <select id="spellbarSlot" class="field__control">
+              <option value="" selected disabled>Select a slot</option>
+              <option>Slot 1</option>
+              <option>Slot 2</option>
+              <option>Slot 3</option>
+              <option>Slot 4</option>
+              <option>Slot 5</option>
+              <option>Slot 6</option>
+              <option>Slot 7</option>
+              <option>Slot 8</option>
+              <option>Slot 9</option>
+              <option>Slot 10</option>
+              <option>Z</option>
+              <option>X</option>
+              <option>Custom</option>
+            </select>
+          </label>
+          <label id="spellbarCustomField" class="field is-hidden">
+            <span class="field__label">Custom Spellbar Slot</span>
+            <input id="spellbarCustom" class="field__control" type="text" placeholder="Describe the slot" />
+          </label>
+          <label class="field">
+            <span class="field__label">Add To Spellbook</span>
+            <select id="spellbookChoice" class="field__control">
+              <option value="" selected disabled>Select...</option>
+              <option>Yes</option>
+              <option>No</option>
+              <option>Custom</option>
+            </select>
+          </label>
+          <label id="spellbookCustomField" class="field is-hidden">
+            <span class="field__label">Custom Spellbook Instruction</span>
+            <input id="spellbookCustom" class="field__control" type="text" placeholder="Describe spellbook behavior" />
+          </label>
+          <p class="helper">Select at least 3 criteria to generate output.</p>
+        </div>
+      </header>
+
+      <section id="criteria" class="criteria is-hidden" aria-live="polite"></section>
+
+      <section class="output">
+        <div class="output__header">
+          <h2>Prompt Output</h2>
+          <button id="copyBtn" class="btn" type="button">Copy to clipboard</button>
+        </div>
+        <textarea
+          id="outputText"
+          class="output__text"
+          rows="8"
+          readonly
+          placeholder="Select options above to generate a prompt..."
+        ></textarea>
+        <p id="validation" class="validation" aria-live="polite"></p>
+      </section>
+    </main>
+
+    <script src="app.js"></script>
+  </body>
+</html>
