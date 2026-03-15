@@ -181,6 +181,46 @@ const toggleField = (fieldId, isVisible) => {
 
 let animationNames = [];
 
+const normalizeSpellIconUrl = (value) => {
+  const trimmed = value.trim();
+  if (!trimmed) return "";
+
+  try {
+    const url = new URL(trimmed);
+    const segments = url.pathname.split("/").filter(Boolean);
+
+    if (
+      url.hostname === "github.com" &&
+      segments.length >= 5 &&
+      segments[2] === "blob"
+    ) {
+      const [owner, repo, , branch, ...pathParts] = segments;
+      return `https://raw.githubusercontent.com/${owner}/${repo}/${branch}/${pathParts.join("/")}`;
+    }
+  } catch (error) {
+    return trimmed;
+  }
+
+  return trimmed;
+};
+
+const updateSpellIconPreview = (value) => {
+  const preview = document.getElementById("spellIconPreview");
+  const empty = document.querySelector(".icon-preview__empty");
+  if (!preview || !empty) return;
+
+  if (value) {
+    preview.src = value;
+    preview.classList.add("is-visible");
+    empty.classList.add("is-hidden");
+    return;
+  }
+
+  preview.removeAttribute("src");
+  preview.classList.remove("is-visible");
+  empty.classList.remove("is-hidden");
+};
+
 const loadAnimations = async () => {
   const animationDatalist = document.getElementById("animationDatalist");
   if (!animationDatalist) return;
@@ -485,9 +525,7 @@ const renderCriteria = () => {
   const empty = document.querySelector(".icon-preview__empty");
   if (preview && empty) {
     preview.addEventListener("error", () => {
-      preview.removeAttribute("src");
-      preview.classList.remove("is-visible");
-      empty.classList.remove("is-hidden");
+      updateSpellIconPreview("");
     });
   }
 
@@ -608,20 +646,9 @@ const handleInputChange = (event) => {
   else if (id === "vfxObject") state.vfx.object = value;
   else if (id === "vfxFeedback") state.vfx.feedback = value;
   else if (id === "spellIconUrl") {
-    state.vfx.spellIconUrl = value.trim();
-    const preview = document.getElementById("spellIconPreview");
-    const empty = document.querySelector(".icon-preview__empty");
-    if (preview && empty) {
-      if (state.vfx.spellIconUrl) {
-        preview.src = state.vfx.spellIconUrl;
-        preview.classList.add("is-visible");
-        empty.classList.add("is-hidden");
-      } else {
-        preview.removeAttribute("src");
-        preview.classList.remove("is-visible");
-        empty.classList.remove("is-hidden");
-      }
-    }
+    state.vfx.spellIconUrl = normalizeSpellIconUrl(value);
+    event.target.value = state.vfx.spellIconUrl;
+    updateSpellIconPreview(state.vfx.spellIconUrl);
   }
   else if (id === "slashShape") state.slashVfx.shape = value;
   else if (id === "slashEdgeStyle") state.slashVfx.edgeStyle = value;
@@ -1031,24 +1058,13 @@ const applyPreset = (preset) => {
   }
 
   state.vfx = { ...state.vfx, ...(preset.vfx || {}) };
+  state.vfx.spellIconUrl = normalizeSpellIconUrl(state.vfx.spellIconUrl || "");
   setField("vfxParticle", state.vfx.particle);
   setField("vfxScreen", state.vfx.screen);
   setField("vfxObject", state.vfx.object);
   setField("vfxFeedback", state.vfx.feedback);
   setField("spellIconUrl", state.vfx.spellIconUrl);
-  const preview = document.getElementById("spellIconPreview");
-  const empty = document.querySelector(".icon-preview__empty");
-  if (preview && empty) {
-    if (state.vfx.spellIconUrl) {
-      preview.src = state.vfx.spellIconUrl;
-      preview.classList.add("is-visible");
-      empty.classList.add("is-hidden");
-    } else {
-      preview.removeAttribute("src");
-      preview.classList.remove("is-visible");
-      empty.classList.remove("is-hidden");
-    }
-  }
+  updateSpellIconPreview(state.vfx.spellIconUrl);
 
   state.slashVfx = { ...state.slashVfx, ...(preset.slashVfx || {}) };
   setField("slashShape", state.slashVfx.shape);
